@@ -1,0 +1,50 @@
+#!/bin/bash
+set -e
+
+echo "Running pre-commit hooks..."
+
+# Save current staged files to be committed
+STAGED_GO_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep "\.go$" || true)
+
+# If no Go files are staged, exit early
+if [ -z "$STAGED_GO_FILES" ]; then
+    echo "No Go files staged for commit. Skipping pre-commit hooks."
+    exit 0
+fi
+
+echo "==> Formatting Go files"
+UNFORMATTED=$(gofmt -l $STAGED_GO_FILES)
+if [ -n "$UNFORMATTED" ]; then
+    echo "The following files need to be formatted with gofmt:"
+    for file in $UNFORMATTED; do
+        echo "  $file"
+    done
+    echo "Running gofmt on these files..."
+    echo $UNFORMATTED | xargs gofmt -w
+    echo "Formatted files have been staged again."
+    echo $UNFORMATTED | xargs git add
+fi
+
+# Check for Go syntax errors
+echo "==> Checking for Go syntax errors"
+for file in $STAGED_GO_FILES; do
+    go vet "$file" 2>&1 || (echo "Go vet failed on $file. Please fix the errors and try again." && exit 1)
+done
+
+# Run faster static analysis
+echo "==> Running staticcheck"
+if command -v staticcheck >/dev/null 2>&1; then
+    staticcheck $STAGED_GO_FILES || (echo "Staticcheck failed. Please fix the errors and try again." && exit 1)
+else
+    echo "Warning: staticcheck not installed. Skipping staticcheck."
+fi
+
+# Run security checks
+echo "==> Running gosec"
+if command -v gosec >/dev/null 2>&1; then
+    gosec -quiet $STAGED_GO_FILES || (echo "Gosec found security issues. Please fix them and try again." && exit 1)
+else
+    echo "Warning: gosec not installed. Skipping security checks."
+fi
+
+echo "All pre-commit hooks passed!"

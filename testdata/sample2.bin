@@ -1,0 +1,5 @@
+Binary content with some embedded strings.
+HELLO_WORLD
+TEST_STRING_1234
+AgentFlux is scanning this binary file.
+END_OF_FILE

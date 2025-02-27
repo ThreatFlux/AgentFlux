@@ -1,0 +1,33 @@
+# Build artifacts
+/build/
+/bin/
+*.exe
+*.test
+*.prof
+
+# Development artifacts
+.git/
+.github/
+.gitignore
+*.md
+!README.md
+!LICENSE.md
+
+# Testing artifacts
+/testdata/
+coverage.*
+*.out
+*.log
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker files (not needed inside container)
+Dockerfile*
+.dockerignore
+
+# Documentation
+/docs/

@@ -1,0 +1,74 @@
+linters:
+  # Enable specific linters
+  enable:
+    - bodyclose     # Checks that HTTP response bodies are closed
+    - deadcode      # Finds unused code
+    - errcheck      # Checks for unchecked errors
+    - gosec         # Inspects source code for security problems
+    - gosimple      # Suggests code simplifications
+    - govet         # Reports suspicious constructs
+    - ineffassign   # Detects ineffectual assignments
+    - misspell      # Finds commonly misspelled words
+    - revive        # Fast, configurable, extensible, flexible, and beautiful linter for Go
+    - staticcheck   # Go static analysis
+    - structcheck   # Finds unused struct fields
+    - typecheck     # Like the front-end of a Go compiler
+    - unconvert     # Remove unnecessary type conversions
+    - unused        # Checks for unused constants, variables, functions and types
+    - varcheck      # Finds unused global variables and constants
+
+issues:
+  # Maximum issues count per one linter
+  max-issues-per-linter: 0
+  
+  # Maximum count of issues with the same text
+  max-same-issues: 0
+
+linters-settings:
+  errcheck:
+    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`;
+    # default is false: such cases aren't reported
+    check-type-assertions: true
+    
+  gosec:
+    # Exclude generated files
+    exclude-generated: true
+    
+  revive:
+    # Minimum confidence for issues, default is 0.8
+    min-confidence: 0.8
+    rules:
+      - name: package-comments
+        disabled: false
+      - name: error-strings
+        disabled: false
+      - name: if-return
+        disabled: false
+      - name: increment-decrement
+        disabled: false
+        
+  misspell:
+    # Correct spellings using locale preferences
+    locale: US
+    
+  staticcheck:
+    go: "1.24"
+    
+run:
+  # Timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 5m
+  
+  # Include test files in analysis
+  tests: true
+  
+  # Allow issues in generated files
+  skip-files:
+    - ".*\\.pb\\.go$"
+    - ".*\\.gen\\.go$"
+
+output:
+  # Format of output (colored-line-number, line-number, json, tab, colored-tab, checkstyle, code-climate, html, colored-html)
+  format: colored-line-number
+  
+  # Print linter name in the end of issue text, default is true
+  print-linter-name: true

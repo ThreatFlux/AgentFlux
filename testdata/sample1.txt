@@ -1,0 +1,3 @@
+This is a sample text file for testing the file scanner and hash processor.
+It contains some basic text content that can be hashed and analyzed.
+The AgentFlux tool should be able to hash this file correctly.

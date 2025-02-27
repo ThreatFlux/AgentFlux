@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # Development environment
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/workspace
+      - go-cache:/go
+    working_dir: /workspace
+    command: shell
+    environment:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    tty: true
+    
+  # Application runtime
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: dev
+        COMMIT: ${COMMIT:-unknown}
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+    volumes:
+      - ${SCAN_PATH:-./testdata}:/data
+    command: --paths=/data --api=${API_ENDPOINT:-https://api.example.com} --token=${API_TOKEN:-test-token}
+    
+  # Mock API server for testing
+  mock-api:
+    image: alpine:3.19
+    command: sh -c "while true; do echo -e 'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"status\":\"ok\"}' | nc -l -p 8000; done"
+    ports:
+      - "8000:8000"
+      
+  # Integration test environment
+  integration:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: test
+        COMMIT: test
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+    volumes:
+      - ./testdata:/data
+    command: --paths=/data --api=http://mock-api:8000 --token=test-token
+    depends_on:
+      - mock-api
+    networks:
+      - integration-net
+      
+networks:
+  integration-net:
+    driver: bridge
+    
+volumes:
+  go-cache:
+    driver: local
