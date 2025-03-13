@@ -26,32 +26,32 @@ const (
 type DeduplicationEngine struct {
 	// DedupType is the method used for deduplication.
 	DedupType DeduplicationType
-	
-	seen         map[string]bool
-	lock         sync.RWMutex
-	totalFiles   int
-	uniqueFiles  int
-	logger       *logging.Logger
-	
+
+	seen        map[string]bool
+	lock        sync.RWMutex
+	totalFiles  int
+	uniqueFiles int
+	logger      *logging.Logger
+
 	// For coordination with tests and shutdowns
-	done         chan struct{}
-	doneMutex    sync.Mutex
+	done      chan struct{}
+	doneMutex sync.Mutex
 }
 
 // NewDeduplicationEngine creates a new DeduplicationEngine with the specified type.
 func NewDeduplicationEngine(dedupType DeduplicationType) *DeduplicationEngine {
 	return &DeduplicationEngine{
-		DedupType:   dedupType,
-		seen:        make(map[string]bool),
-		logger:      logging.NewLogger("dedup"),
-		done:        make(chan struct{}),
+		DedupType: dedupType,
+		seen:      make(map[string]bool),
+		logger:    logging.NewLogger("dedup"),
+		done:      make(chan struct{}),
 	}
 }
 
 // Deduplicate filters out duplicate files from the input channel.
 func (d *DeduplicationEngine) Deduplicate(ctx context.Context, inputChannel <-chan processor.FileResult) <-chan processor.FileResult {
 	outputChannel := make(chan processor.FileResult, 100)
-	
+
 	go func() {
 		defer func() {
 			close(outputChannel)
@@ -64,7 +64,7 @@ func (d *DeduplicationEngine) Deduplicate(ctx context.Context, inputChannel <-ch
 				close(d.done)
 			}
 		}()
-		
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -72,21 +72,33 @@ func (d *DeduplicationEngine) Deduplicate(ctx context.Context, inputChannel <-ch
 				d.logger.Info("Deduplication stopped due to context cancellation")
 				d.lock.Unlock()
 				return
-				
+
 			case result, ok := <-inputChannel:
 				if !ok {
 					// Input channel closed
 					d.lock.Lock()
-					d.logger.Info("Deduplication complete: processed %d files, %d unique", 
+					d.logger.Info("Deduplication complete: processed %d files, %d unique",
 						d.totalFiles, d.uniqueFiles)
 					d.lock.Unlock()
 					return
 				}
-				
+
+				// Check for context cancellation again to avoid race conditions
+				select {
+				case <-ctx.Done():
+					// Context was cancelled while we were reading from input channel
+					d.lock.Lock()
+					d.logger.Info("Deduplication stopped due to context cancellation during processing")
+					d.lock.Unlock()
+					return
+				default:
+					// Continue processing
+				}
+
 				// Increment total files counter
 				d.lock.Lock()
 				d.totalFiles++
-				
+
 				// Skip files with errors completely in the test mode
 				// This is specifically for the test behavior as defined in engine_test.go
 				if result.Error != "" {
@@ -94,24 +106,35 @@ func (d *DeduplicationEngine) Deduplicate(ctx context.Context, inputChannel <-ch
 					// Do not send errors to output
 					continue
 				}
-				
+
 				// Get the key for deduplication
 				key := d.getDeduplicationKey(result)
-				
+
 				// Check if the file is a duplicate
 				isDuplicate := d.seen[key]
-				
+
 				if !isDuplicate {
 					// Mark as seen
 					d.seen[key] = true
 					d.uniqueFiles++
 					d.lock.Unlock()
-					
+
+					// Before sending to output channel, check context again to handle race conditions
+					select {
+					case <-ctx.Done():
+						// Context was cancelled while we were processing
+						// Don't send the result
+						return
+					default:
+						// Context still valid, proceed with sending
+					}
+
 					// Send to output channel
 					select {
 					case outputChannel <- result:
 						// Successfully sent
 					case <-ctx.Done():
+						// Context cancelled while trying to send
 						return
 					}
 				} else {
@@ -121,7 +144,7 @@ func (d *DeduplicationEngine) Deduplicate(ctx context.Context, inputChannel <-ch
 			}
 		}
 	}()
-	
+
 	return outputChannel
 }
 
@@ -157,7 +180,7 @@ func (d *DeduplicationEngine) Reset() {
 	oldDone := d.done
 	d.done = make(chan struct{})
 	d.doneMutex.Unlock()
-	
+
 	// Make sure any ongoing deduplication is finished - avoid race conditions
 	select {
 	case <-oldDone:
@@ -166,11 +189,11 @@ func (d *DeduplicationEngine) Reset() {
 		// Wait for a very short time to allow other goroutines to complete
 		// This helps avoid race conditions in the test
 	}
-	
+
 	// Lock for the entire reset operation
 	d.lock.Lock()
 	defer d.lock.Unlock()
-	
+
 	// Create a new map instead of clearing the existing one
 	d.seen = make(map[string]bool)
 	d.totalFiles = 0

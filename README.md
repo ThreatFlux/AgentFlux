@@ -8,8 +8,10 @@
 :∂ç
 # AgentFlux
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/vtriple/agentflux)](https://goreportcard.com/report/github.com/vtriple/agentflux)
+[![Go Report Card](https://goreportcard.com/badge/github.com/threatflux/agentflux)](https://goreportcard.com/report/github.com/threatflux/agentflux)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+Warning - This is under development and not ready for use.
 
 AgentFlux is a high-performance file system scanning tool developed by ThreatFlux that computes file hashes, extracts strings, and sends this information to an API backend. It's designed for efficient processing of large file systems with automatic deduplication, parallel processing, and secure communication.
   mm         
@@ -28,13 +30,13 @@ AgentFlux is a high-performance file system scanning tool developed by ThreatFlu
 
 ### From Binary
 
-Download the latest release from our [releases page](https://github.com/vtriple/agentflux/releases).
+Download the latest release from our [releases page](https://github.com/threatflux/agentflux/releases).
 
 ### From Source
 
 ```bash
 # Clone the repository
-git clone https://github.com/vtriple/agentflux.git
+git clone https://github.com/threatflux/agentflux.git
 cd agentflux
 
 # Build the binary
@@ -45,10 +47,10 @@ make build
 
 ```bash
 # Pull the latest image
-docker pull vtriple/agentflux:latest
+docker pull threatflux/agentflux:latest
 
 # Or build locally
-docker build -t vtriple/agentflux:latest .
+docker build -t threatflux/agentflux:latest .
 ```
 
 ## Usage
@@ -57,7 +59,7 @@ docker build -t vtriple/agentflux:latest .
 
 ```bash
 # Scan the current directory and send results to an API
-./build/agentflux --paths="." --api="https://api.example.com/results" --token="your-api-token"
+./build/agentflux --paths="." --api="http://api.agent.threatflux.local:8800/results" --token="your-api-token"
 ```
 
 ### Scan Multiple Directories
@@ -92,7 +94,7 @@ docker build -t vtriple/agentflux:latest .
 
 ```bash
 # Run with Docker
-docker run -v /path/to/scan:/data vtriple/agentflux:latest --paths=/data --api=https://api.example.com/results --token=your-api-token
+docker run -v /path/to/scan:/data threatflux/agentflux:latest --paths=/data --api=https://api.example.com/results --token=your-api-token
 ```
 
 ## Command Line Options
