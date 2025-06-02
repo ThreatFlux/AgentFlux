@@ -42,13 +42,13 @@ RUN cd cmd/agentflux/ && \
     go build -trimpath -ldflags="-s -w -X main.Version=${VERSION} -X main.GitCommit=${COMMIT} -X main.BuildDate=${BUILD_DATE}" -o /app/agentflux
 
 # Generate SBOM for the build stage
-FROM alpine:3.21 AS sbom-generator
+FROM alpine:3.22 AS sbom-generator
 RUN apk add --no-cache syft=1.19.0-r2
 COPY --from=builder /app /app
 RUN syft /app -o spdx-json=/sbom.json
 
 # Final stage
-FROM alpine:3.21
+FROM alpine:3.22
 
 # Build arguments for final stage
 ARG VERSION
